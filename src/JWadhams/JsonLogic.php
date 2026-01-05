@@ -10,6 +10,8 @@ use function count;
 class JsonLogic
 {
     private static $custom_operations = [];
+    private static $path_cache = [];
+
     public static function get_operator($logic)
     {
         return array_keys($logic)[0];
@@ -108,18 +110,24 @@ class JsonLogic
                 return $a;
             },
             'var' => function ($a = null, $default = null) use ($data) {
-                if ($a === null or $a === "") {
+                if ($a === null || $a === "") {
                     return $data;
                 }
+
+                if (!isset(self::$path_cache[$a])) {
+                    self::$path_cache[$a] = explode('.', $a);
+                }
+
                 //Descending into data using dot-notation
-                //This is actually safe for integer indexes, PHP treats $a["1"] exactly like $a[1]
-                foreach (explode('.', $a) as $prop) {
+                $parts = self::$path_cache[$a];
+
+                foreach ($parts as $prop) {
                     if ((is_array($data) || $data instanceof \ArrayAccess) && isset($data[$prop])) {
                         $data = $data[$prop];
                     } elseif (is_object($data) && isset($data->{$prop})) {
                         $data = $data->{$prop};
                     } else {
-                        return $default; //Trying to get a value from a primitive
+                        return $default;
                     }
                 }
                 return $data;
