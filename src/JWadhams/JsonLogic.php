@@ -14,7 +14,7 @@ class JsonLogic
 
     public static function get_operator($logic)
     {
-        return array_keys($logic)[0];
+        return array_key_first($logic);
     }
     public static function get_values($logic, $fix_unary = true)
     {
@@ -354,7 +354,7 @@ class JsonLogic
         $collection = [];
 
         if (self::is_logic($logic)) {
-            $op = array_keys($logic)[0];
+            $op = array_key_first($logic);
             $values = (array)$logic[$op];
 
             if ($op === "var") {
