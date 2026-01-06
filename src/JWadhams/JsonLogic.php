@@ -86,7 +86,7 @@ class JsonLogic
                     return array_sum(func_get_args());
                 },
                 '-' => function ($a, $b = null) {
-                    if ($b === null) {
+                    if (func_num_args() === 1) {
                         return -$a;
                     } else {
                         return $a - $b;
