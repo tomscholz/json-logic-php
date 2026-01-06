@@ -122,10 +122,11 @@ class JsonLogic
 
         if (!self::is_logic($logic)) {
             if (is_array($logic)) {
-                //Could be an array of logic statements. Only one way to find out.
-                return array_map(function ($l) use ($data) {
-                    return self::apply($l, $data);
-                }, $logic);
+                $values = [];
+                foreach ($logic as $key => $value) {
+                    $values[$key] = self::apply($value, $data);
+                }
+                return $values;
             } else {
                 return $logic;
             }
@@ -311,10 +312,11 @@ class JsonLogic
             throw new \Exception("Unrecognized operator $op");
         }
 
-        //Recursion!
-        $values = array_map(function ($value) use ($data) {
-            return self::apply($value, $data);
-        }, $values);
+        $array_map = [];
+        foreach ($values as $key => $value) {
+            $array_map[$key] = self::apply($value, $data);
+        }
+        $values = $array_map;
 
         return call_user_func_array($operation, $values);
     }
