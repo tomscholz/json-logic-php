@@ -1,59 +1,25 @@
 <?php
 
+
 namespace JWadhams;
 
-use function is_object;
-use function is_array;
-use function is_string;
 use function count;
+use function is_array;
+use function is_object;
+use function is_string;
 
 class JsonLogic
 {
-    private static $operators         = null;
+    private static $operators = null;
     private static $custom_operations = [];
     private static $path_cache = [];
-
-    public static function get_operator($logic)
-    {
-        return array_key_first($logic);
-    }
-    public static function get_values($logic, $fix_unary = true)
-    {
-        $op = static::get_operator($logic);
-        $values = $logic[$op];
-
-        //easy syntax for unary operators, like ["var" => "x"] instead of strict ["var" => ["x"]]
-        if ($fix_unary and (!is_array($values) or static::is_logic($values))) {
-            $values = [ $values ];
-        }
-        return $values;
-    }
-
-    public static function is_logic($array)
-    {
-        return (
-            is_array($array)
-            and
-            count($array) === 1
-            and
-            is_string(static::get_operator($array))
-        );
-    }
-
-    public static function truthy($logic)
-    {
-        if ($logic === "0") {
-            return true;
-        }
-        return (bool)$logic;
-    }
 
     /**
      * Define standard operators if not already defined.
      */
     public static function build_operators()
     {
-        if(!self::$operators) {
+        if (!self::$operators) {
             self::$operators = [
                 '==' => function ($a, $b) {
                     return $a == $b;
@@ -77,13 +43,13 @@ class JsonLogic
                     if ($c === null) {
                         return $a < $b;
                     }
-                    return  ($a < $b) and ($b < $c) ;
+                    return ($a < $b) and ($b < $c);
                 },
                 '<=' => function ($a, $b, $c = null) {
                     if ($c === null) {
-                        return  $a <= $b;
+                        return $a <= $b;
                     }
-                    return ($a <= $b) and ($b <= $c) ;
+                    return ($a <= $b) and ($b <= $c);
                 },
                 '%' => function ($a, $b) {
                     return $a % $b;
@@ -92,7 +58,7 @@ class JsonLogic
                     return static::truthy($a);
                 },
                 '!' => function ($a) {
-                    return ! static::truthy($a);
+                    return !static::truthy($a);
                 },
                 'log' => function ($a) {
                     error_log($a);
@@ -119,8 +85,8 @@ class JsonLogic
                 '+' => function () {
                     return array_sum(func_get_args());
                 },
-                '-' => function ($a, $b=null) {
-                    if ($b===null) {
+                '-' => function ($a, $b = null) {
+                    if ($b === null) {
                         return -$a;
                     } else {
                         return $a - $b;
@@ -131,7 +97,7 @@ class JsonLogic
                 },
                 '*' => function () {
                     return array_reduce(func_get_args(), function ($a, $b) {
-                        return $a*$b;
+                        return $a * $b;
                     }, 1);
                 },
                 'merge' => function () {
@@ -154,7 +120,7 @@ class JsonLogic
             $logic = (array)$logic;
         }
 
-        if (! self::is_logic($logic)) {
+        if (!self::is_logic($logic)) {
             if (is_array($logic)) {
                 //Could be an array of logic statements. Only one way to find out.
                 return array_map(function ($l) use ($data) {
@@ -171,11 +137,11 @@ class JsonLogic
         $operation = null;
 
         /**
-        * Most rules need depth-first recursion. These rules need to manage their
-        * own recursion. e.g., if you've added an operator with side-effects
-        * you only want `if` to execute the minimum conditions and exactly one
-        * consequent.
-        */
+         * Most rules need depth-first recursion. These rules need to manage their
+         * own recursion. e.g., if you've added an operator with side-effects
+         * you only want `if` to execute the minimum conditions and exactly one
+         * consequent.
+         */
         if ($op === 'if' || $op == '?:') {
             /* 'if' should be called with a odd number of parameters, 3 or greater
             This works on the pattern:
@@ -190,12 +156,12 @@ class JsonLogic
             given one parameter, evaluate and return it. (it's an Else and all the If/ElseIf were false)
             given 0 parameters, return NULL (not great practice, but there was no Else)
             */
-            for ($i = 0 ; $i < count($values) - 1 ; $i += 2) {
+            for ($i = 0; $i < count($values) - 1; $i += 2) {
                 if (static::truthy(static::apply($values[$i], $data))) {
-                    return static::apply($values[$i+1], $data);
+                    return static::apply($values[$i + 1], $data);
                 }
             }
-            if (count($values) === $i+1) {
+            if (count($values) === $i + 1) {
                 return static::apply($values[$i], $data);
             }
             return null;
@@ -204,7 +170,7 @@ class JsonLogic
             // we don't even *evaluate* values after the first falsy (short-circuit)
             foreach ($values as $value) {
                 $current = static::apply($value, $data);
-                if ( ! static::truthy($current)) {
+                if (!static::truthy($current)) {
                     return $current;
                 }
             }
@@ -264,7 +230,7 @@ class JsonLogic
                 function ($accumulator, $current) use ($scopedLogic) {
                     return static::apply(
                         $scopedLogic,
-                        ['current'=>$current, 'accumulator'=>$accumulator]
+                        ['current' => $current, 'accumulator' => $accumulator]
                     );
                 },
                 $initial
@@ -292,11 +258,7 @@ class JsonLogic
                     return $data;
                 }
 
-                if (!isset(self::$path_cache[$a])) {
-                    self::$path_cache[$a] = explode('.', $a);
-                }
-
-                $parts = self::$path_cache[$a];
+                $parts = self::$path_cache[$a] ??= explode('.', (string)$a);
 
                 foreach ($parts as $prop) {
                     if ((is_array($data) || $data instanceof \ArrayAccess) && isset($data[$prop])) {
@@ -324,7 +286,7 @@ class JsonLogic
 
                 $missing = [];
                 foreach ($values as $data_key) {
-                    $value = static::apply(['var'=>$data_key], $data);
+                    $value = static::apply(['var' => $data_key], $data);
                     if ($value === null or $value === "") {
                         array_push($missing, $data_key);
                     }
@@ -334,7 +296,7 @@ class JsonLogic
             };
         } elseif ($op === 'missing_some') {
             $operation = function ($minimum, $options) use ($data) {
-                $are_missing = static::apply(['missing'=>$options], $data);
+                $are_missing = static::apply(['missing' => $options], $data);
                 if (count($options) - count($are_missing) >= $minimum) {
                     return [];
                 } else {
@@ -355,6 +317,42 @@ class JsonLogic
         }, $values);
 
         return call_user_func_array($operation, $values);
+    }
+
+    public static function truthy($logic)
+    {
+        if ($logic === "0") {
+            return true;
+        }
+        return (bool)$logic;
+    }
+
+    public static function is_logic($array)
+    {
+        return (
+            is_array($array)
+            and
+            count($array) === 1
+            and
+            is_string(static::get_operator($array))
+        );
+    }
+
+    public static function get_operator($logic)
+    {
+        return array_key_first($logic);
+    }
+
+    public static function get_values($logic, $fix_unary = true)
+    {
+        $op = static::get_operator($logic);
+        $values = $logic[$op];
+
+        //easy syntax for unary operators, like ["var" => "x"] instead of strict ["var" => ["x"]]
+        if ($fix_unary and (!is_array($values) or static::is_logic($values))) {
+            $values = [$values];
+        }
+        return $values;
     }
 
     public static function uses_data($logic)
@@ -403,7 +401,7 @@ class JsonLogic
             return is_string($rule);
         }
         if ($pattern === "array") {
-            return is_array($rule) and ! static::is_logic($rule);
+            return is_array($rule) and !static::is_logic($rule);
         }
 
         if (static::is_logic($pattern)) {
@@ -431,9 +429,9 @@ class JsonLogic
                 Note, array order MATTERS, because we're using this array test logic to consider arguments, where order can matter. (e.g., + is commutative, but '-' or 'if' or 'var' are NOT)
 
                 */
-                for ($i = 0 ; $i < count($pattern) ; $i += 1) {
+                for ($i = 0; $i < count($pattern); $i += 1) {
                     //If any fail, we fail
-                    if (! static::rule_like($rule[$i], $pattern[$i])) {
+                    if (!static::rule_like($rule[$i], $pattern[$i])) {
                         return false;
                     }
                 }
